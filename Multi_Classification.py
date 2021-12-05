@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.io import loadmat
 from scipy.optimize import minimize
-import Logistic_Regression as LR
+#import Logistic_Regression as LR
 def load_data(path):
     data = loadmat(path)
     X = data["X"]
@@ -44,9 +44,9 @@ def plot_100_images(X):
     plt.show()
 #plot_100_images(X)
 
-def sigmoid_function(z):
+def sigmoid(z):
     return 1 / (1 + np.exp(-z))
-
+"""
 def Reg_Cost(theta,X,y,l=1):
     _theta = theta[1:]
     reg = (1 / (2 *len(X))) +(_theta @ _theta)
@@ -56,6 +56,21 @@ def Reg_Gradient(theta,X,y, l=1):
     reg = (1/len(X)) * theta
     reg[0] = 0
     return LR.Gradient_Descent(theta,X,y) + reg
+"""
+
+
+def Reg_Cost(theta, X, y, l):
+    thetaReg = theta[1:]
+    cost = (-y * np.log(sigmoid(X @ theta))) + (y - 1)*np.log(1 - sigmoid(X @ theta))
+    reg = (thetaReg @ thetaReg) * l / (2 * len(X))
+    return np.mean(cost) + reg
+
+def Reg_Gradient(theta, X, y, l):
+    thetaReg = theta[1:]
+    gradient = (1 / len(X)) * X.T @ (sigmoid(X @ theta) - y)
+    reg = np.concatenate([np.array([0]), (l / len(X)) * thetaReg])
+    return gradient + reg
+
 
 def one_vs_all (X,y,l,k):
     """
@@ -67,9 +82,8 @@ def one_vs_all (X,y,l,k):
     #因为默认的i值从0开始，但为了符合一般观念——即第一个分类器对应第一次循环，所以改范围
     for i in range(1, k + 1):
         theta = np.zeros(X.shape[1])
-        #不懂，此处做标记
+        #不懂，此处做标记(将1_10 10个类被转换为 0—1两种表达方式)
         y_i = np.array([1 if label == i else 0 for label in y])
-        print(y_i)
         """
         此函数为scipy库中的minimize函数。具体信息参考python内部的源代码解释。这里只简单介绍各参数的用法（并且仅为个人在看完注释之后的理解，不一定对）：
         minimize：对目标函数求根据一个或多个参数求最小值
@@ -108,13 +122,14 @@ def one_vs_all (X,y,l,k):
         ``message`` describes the cause of the termination.
         """
         res = minimize(fun = Reg_Cost, x0 = theta, args = (X, y_i,l), method = "TNC", jac = Reg_Gradient, options = {'disp' : True})
+        
         final_theta[i - 1 : ] = res.x
 
     return final_theta
 
 def predict_all(X, final_theta):
     # 计算各类的可能性
-    possibility = sigmoid_function(X @ final_theta.T)
+    possibility = sigmoid(X @ final_theta.T)
     #返回最大的索引（列方向）
     max_possibility = np.argmax(possibility, axis = 1)
     #使其符合常识
@@ -124,10 +139,13 @@ def predict_all(X, final_theta):
 raw_X, raw_y = load_data('E:\chen yuanyao\Machine Learning\ex1-ex8-matlab\ex3\ex3data1.mat')
 X = np.insert(raw_X, 0, 1, axis=1) # (5000, 401)
 y = raw_y.flatten()  # 这里消除了一个维度，方便后面的计算 or .reshape(-1) （5000，）
-
-print(y)
+#for i in range(len(y)):
+    #print(y[i])
 all_theta = one_vs_all(X, y, 1, 10)
+
 all_theta  # 每一行是一个分类器的一组参数
 y_pred = predict_all(X, all_theta)
+y_pred.reshape(y.shape)
 accuracy = np.mean(y_pred == y)
 print ('accuracy = {0}%'.format(accuracy * 100))
+print(all_theta[1])
